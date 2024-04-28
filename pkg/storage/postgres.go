@@ -28,3 +28,8 @@ func (s *Storage) RegisterUser(user models.User) (models.User, error) {
 	tx := s.db.Create(&user)
 	return user, tx.Error
 }
+
+func (s *Storage) LoginUser(user models.User) (models.User, error) {
+	tx := s.db.Where("email = ?", user.Email).First(&user)
+	return user, tx.Error
+}

@@ -32,3 +32,34 @@ func Register(c *gin.Context, storage *storage.Storage) {
 	}
 	c.JSON(http.StatusOK, raw)
 }
+
+func Login(c *gin.Context, storage *storage.Storage) {
+	var data map[string]string
+
+	if err := c.BindJSON(&data); err != nil {
+		log.Println(err)
+	}
+
+	user := models.User{
+		Email:    data["email"],
+		Password: []byte(data["password"]),
+	}
+
+	raw, err := storage.LoginUser(user)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+
+	}
+
+	if raw.ID == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"msg": "user not found"})
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword(raw.Password, []byte(data["password"])); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"msg": "wrong password"})
+		return
+	}
+
+	c.JSON(http.StatusOK, raw)
+}

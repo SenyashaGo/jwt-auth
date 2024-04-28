@@ -13,6 +13,6 @@ func Setup(storage *storage.Storage, app *gin.Engine) {
 		c.JSON(http.StatusOK, gin.H{"message": "Hello!"})
 	})
 	api.POST("/register", func(ctx *gin.Context) { Register(ctx, storage) })
-	api.POST("/login", func(ctx *gin.Context) {})
+	api.POST("/login", func(ctx *gin.Context) { Login(ctx, storage) })
 	api.POST("/logout", func(ctx *gin.Context) {})
 }
