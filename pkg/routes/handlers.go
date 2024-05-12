@@ -3,10 +3,13 @@ package routes
 import (
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/SenyashaGo/jwt-auth/pkg/models"
 	"github.com/SenyashaGo/jwt-auth/pkg/storage"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -32,6 +35,8 @@ func Register(c *gin.Context, storage *storage.Storage) {
 	}
 	c.JSON(http.StatusOK, raw)
 }
+
+const SecretKey = "secret"
 
 func Login(c *gin.Context, storage *storage.Storage) {
 	var data map[string]string
@@ -61,5 +66,50 @@ func Login(c *gin.Context, storage *storage.Storage) {
 		return
 	}
 
+	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
+		Issuer:    strconv.Itoa(int(raw.ID)),
+		ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
+	})
+
+	token, err := claims.SignedString([]byte(SecretKey))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"msg": "could not login"})
+		return
+	}
+
+	c.SetCookie("jwt", token, 3600, "/", "localhost", false, true)
 	c.JSON(http.StatusOK, raw)
+}
+
+func User(c *gin.Context, storage *storage.Storage) {
+	cookie, err := c.Cookie("jwt")
+
+	if err != nil {
+		cookie = "Not Set"
+		c.JSON(http.StatusBadRequest, cookie)
+		return
+	}
+
+	token, err := jwt.ParseWithClaims(cookie, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(SecretKey), nil
+	})
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, err)
+		return
+	}
+
+	claims := token.Claims.(*jwt.StandardClaims)
+
+	raw, err := storage.GetUser(claims)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, raw)
+}
+
+func Logout(c *gin.Context) {
+	c.SetCookie("jwt", "", -3600, "/", "localhost", false, true)
+	c.JSON(http.StatusOK, "success")
 }

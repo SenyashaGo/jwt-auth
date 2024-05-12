@@ -10,7 +10,7 @@ import (
 )
 
 func Run(storage *storage.Storage, cfg *config.Config) error {
-	app := gin.New()
+	app := gin.Default()
 	routes.Setup(storage, app)
 	return app.Run(net.JoinHostPort(cfg.Host, cfg.Port))
 }
